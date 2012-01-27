@@ -38,18 +38,18 @@ module Noid
     # @param [String] id
     # @return bool
     def valid? id
-      prefix = id[0..@prefix.length-1]
-      ch = id[@prefix.length..-1].split('')
-      check = ch.pop if @check
-      return false unless prefix == @prefix
+      prefix = @template.prefix.empty? ? '' : id[0..@template.prefix.length-1]
+      ch = @template.prefix.empty? ? id.split('') : id[@template.prefix.length..-1].split('')
+      check = ch.pop if @template.checkdigit?
+      return false unless prefix == @template.prefix
 
-      return false unless @characters.length == ch.length
-      @characters.each_with_index do |c, i|
+      return false unless @template.characters.length == ch.length
+      @template.characters.each_with_index do |c, i|
         return false unless Noid::XDIGIT.include? ch[i] 
         return false if c == 'd' and ch[i] =~ /[^\d]/
       end
 
-      return false unless check.nil? or check == checkdigit(id[0..-2])
+      return false unless check.nil? or check == @template.checkdigit(id[0..-2])
 
       true
     end
