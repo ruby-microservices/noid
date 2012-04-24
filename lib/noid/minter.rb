@@ -1,4 +1,4 @@
-require 'backports'
+require 'backports' if RUBY_VERSION.to_f < 1.9
 
 module Noid
   class Minter
@@ -60,8 +60,8 @@ module Noid
     # @param [Integer] seq
     # @return [Random]
     def seed seed = nil, seq = 0
-      @rand = Random.new(seed) if seed
-      @rand ||= Random.new 
+      @rand = ::Random.new(seed) if seed
+      @rand ||= ::Random.new 
       @seed = @rand.seed
       @seq = seq || 0
 

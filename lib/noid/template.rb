@@ -24,7 +24,7 @@ module Noid
         str[prefix.length..-1].length == characters.length
       end
 
-      characters.each_with_index do |c, i|
+      characters.split('').each_with_index do |c, i|
         case c
           when 'e'
             return false unless Noid::XDIGIT.include? str[prefix.length + i]
