@@ -17,13 +17,13 @@ module Noid
     end
 
     # A noid has the structure (prefix)(code)(checkdigit)
-    # the regexp has the following named captures
-    #  :body - the prefix and the code
-    #  :code - the changing id characters (not the prefix and not the checkdigit)
-    #  :check - the checkdigit, if there is one. This field is missing if there is no checkdigit
+    # the regexp has the following captures
+    #  1 - the prefix and the code
+    #  2 - the changing id characters (not the prefix and not the checkdigit)
+    #  3 - the checkdigit, if there is one. This field is missing if there is no checkdigit
     def validation_regexp
       return @validation_regexp if @validation_regexp
-      pattern_list = ['\A', '(?<body>', Regexp.escape(prefix), '(?<code>']
+      pattern_list = ['\A', '(', Regexp.escape(prefix), '(']
       if generator == 'z'
         pattern_list << character_to_pattern(@character_list.last) << '*'
       end
@@ -32,7 +32,7 @@ module Noid
       end
       pattern_list << ')' << ')'  # close <code> and <body>
       if checkdigit?
-        pattern_list << '(?<check>' << character_to_pattern('e') << ')'
+        pattern_list << '(' << character_to_pattern('e') << ')'
       end
       pattern_list << '\Z'
 
@@ -46,7 +46,7 @@ module Noid
       match = validation_regexp.match(str)
       return false if match.nil?
       if checkdigit?
-        return checkdigit(match[:body]) == match[:check]
+        return checkdigit(match[1]) == match[3]
       end
       true
     end
@@ -111,16 +111,16 @@ module Noid
     # raise an exception if there is a parse error
     #
     def parse_template
-      match = /\A(?<prefix>.*)\.(?<generator>[rsz])(?<mask>[ed]+)(?<check>k?)\Z/.match(@template)
+      match = /\A(.*)\.([rsz])([ed]+)(k?)\Z/.match(@template)
       if match.nil?
         raise "Malformed Noid template '#{@template}'"
       end
-      @prefix = match[:prefix]
-      @generator = match[:generator]
-      @characters = match[:mask]
+      @prefix = match[1]
+      @generator = match[2]
+      @characters = match[3]
       @character_list = @characters.split('')
       @mask = @generator + @characters
-      @checkdigit = (match[:check] == 'k')
+      @checkdigit = (match[4] == 'k')
     end
 
     def xdigit_pattern
