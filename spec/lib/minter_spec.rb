@@ -106,6 +106,12 @@ describe Noid::Minter do
       id = minter.mint
       minter.valid?(id).should be_true
     end
+    it "should validate unlimited sequence with mixed digits" do
+      minter = Noid::Minter.new(:template => ".zed")
+      1000.times { minter.mint }
+      id = minter.mint
+      minter.valid?(id).should be_true
+    end
   end
 
   describe "seed" do

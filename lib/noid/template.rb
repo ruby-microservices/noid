@@ -4,7 +4,8 @@ module Noid
 
     # @param [String] template A Template is a coded string of the form Prefix.Mask that governs how identifiers will be minted. 
     def initialize template
-      @template = template  
+      @template = template
+      parse_template
     end
 
     def mint n
@@ -15,63 +16,69 @@ module Noid
       str
     end
 
-    def valid? str
-      return false unless str[0..prefix.length] == prefix
-
+    # A noid has the structure (prefix)(code)(checkdigit)
+    # the regexp has the following captures
+    #  1 - the prefix and the code
+    #  2 - the changing id characters (not the prefix and not the checkdigit)
+    #  3 - the checkdigit, if there is one. This field is missing if there is no checkdigit
+    def validation_regexp
+      return @validation_regexp if @validation_regexp
+      pattern_list = ['\A', '(', Regexp.escape(prefix), '(']
       if generator == 'z'
-        str[prefix.length..-1].length > 2
-      else
-        str[prefix.length..-1].length == characters.length
+        pattern_list << character_to_pattern(@character_list.last) << '*'
       end
+      @character_list.each do |c|
+        pattern_list << character_to_pattern(c)
+      end
+      pattern_list << ')' << ')'  # close <code> and <body>
+      if checkdigit?
+        pattern_list << '(' << character_to_pattern('e') << ')'
+      end
+      pattern_list << '\Z'
 
-      characters.split('').each_with_index do |c, i|
-        case c
-          when 'e'
-            return false unless Noid::XDIGIT.include? str[prefix.length + i]
-          when 'd'
-            return false unless str[prefix.length + i] =~ /\d/
-        end
-      end 
+      @validation_regexp = Regexp.new(pattern_list.join(''))
+    end
 
-      return false unless checkdigit(str[0..-2]) == str.split('').last if checkdigit?
-
+    ##
+    # Is the passed in string valid against this template?
+    # Also validates the check digit, if the template has one
+    def valid?(str)
+      match = validation_regexp.match(str)
+      return false if match.nil?
+      if checkdigit?
+        return checkdigit(match[1]) == match[3]
+      end
       true
     end
 
     ##
     # identifier prefix string
     def prefix
-      @prefix ||= @template.split('.').first
+      @prefix
     end
 
     ##
     # identifier mask string
     def mask
-      @mask ||= @template.split('.').last
+      @mask
     end
 
     ##
     # generator type to use: r, s, z
     def generator
-      @generator ||= mask[0..0]  
+      @generator
     end
 
     ##
     # sequence pattern: e (extended), d (digit)
     def characters
-      @characters ||= begin
-        if checkdigit?
-          mask[1..-2]
-        else
-          mask[1..-1]
-        end
-                      end
+      @characters
     end
 
     ##
     # should generated identifiers have a checkdigit?
     def checkdigit?
-      mask.split('').last == 'k'
+      @checkdigit
     end
 
     ##
@@ -91,18 +98,50 @@ module Noid
     ##
     # maximum sequence value for the template
     def max
-      @max ||= begin
-        case generator
-          when 'z'
-            nil
-          else
-            characters.split('').map { |x| character_space(x) }.compact.inject(1) { |total, x| total *= x }
-        end
-      end
+      @max ||= case generator
+               when 'z' then nil
+               else size_list.inject(1) { |total, x| total * x }
+               end
     end
 
 
     protected
+    ##
+    # parse @template and put the results into class variables
+    # raise an exception if there is a parse error
+    #
+    def parse_template
+      match = /\A(.*)\.([rsz])([ed]+)(k?)\Z/.match(@template)
+      if match.nil?
+        raise "Malformed Noid template '#{@template}'"
+      end
+      @prefix = match[1]
+      @generator = match[2]
+      @characters = match[3]
+      @character_list = @characters.split('')
+      @mask = @generator + @characters
+      @checkdigit = (match[4] == 'k')
+    end
+
+    def xdigit_pattern
+      @xdigit_pattern ||= "[" + Noid::XDIGIT.join('') + "]"
+    end
+
+    def character_to_pattern(c)
+      case c
+      when 'e' then xdigit_pattern
+      when 'd' then '\d'
+      else ''
+      end
+    end
+
+    ##
+    # Return a list giving the number of possible characters at each position
+    #
+    def size_list
+      @size_list ||= @character_list.map { |c| character_space(c) }
+    end
+
     ##
     # total size of a given template character value
     # @param [String] c
@@ -119,18 +158,18 @@ module Noid
     # convert a minter position to a noid string under this template
     # @param [Integer] n
     # @return [String]
-    def n2xdig n
-      xdig = characters.reverse.split('').map do |c|
-        value = n % character_space(c)
-        n = n / character_space(c)  
+    def n2xdig(n)
+      xdig = size_list.reverse.map do |size|
+        value = n % size
+        n = n / size
         Noid::XDIGIT[value]
       end.compact.join('')
 
       if generator == 'z'
-        c = characters.split('').last
+        size = size_list.last
         while n > 0
-          value = n % character_space(c)
-          n = n / character_space(c)  
+          value = n % size
+          n = n / size
           xdig += Noid::XDIGIT[value]
         end
       end
