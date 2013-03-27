@@ -20,6 +20,7 @@ module Noid
 
         @after_mint = options[:after_mint]
       end
+      @template ||= Noid::Template.new(@template_string)
     end  
 
     ##
@@ -38,7 +39,7 @@ module Noid
     #
     # @return Noid::Template
     def template
-      @template ||= Noid::Template.new(@template_string)
+      @template 
     end
 
     ##

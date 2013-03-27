@@ -106,6 +106,12 @@ describe Noid::Minter do
       id = minter.mint
       minter.valid?(id).should be_true
     end
+    it "should validate with a new minter" do
+      minter = Noid::Minter.new(:template => ".redek")
+      id = minter.mint
+      minter2 = Noid::Minter.new(:template => ".redek")
+      minter2.valid?(id).should be_true
+    end
   end
 
   describe "seed" do
