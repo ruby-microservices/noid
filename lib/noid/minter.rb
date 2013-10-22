@@ -1,5 +1,3 @@
-require 'backports' if RUBY_VERSION.to_f < 1.9
-
 module Noid
   class Minter
     attr_reader :seed, :seq
