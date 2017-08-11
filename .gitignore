@@ -5,3 +5,5 @@ pkg/*
 .rvmrc
 .ruby-*
 .byebug_history
+
+.internal_test_app
