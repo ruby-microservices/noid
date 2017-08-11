@@ -21,6 +21,9 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 1.9.3'
 
+  s.add_dependency 'blacklight'
+
+  s.add_development_dependency 'engine_cart'
   s.add_development_dependency 'bundler'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec', '>= 3.0'
